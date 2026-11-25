@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/rampradeep84/muster/packages/module-sdk/manifest.schema.json",
+  "$id": "https://github.com/agentmuster/muster/packages/module-sdk/manifest.schema.json",
   "title": "Muster module manifest (muster-module.json)",
   "type": "object",
   "required": ["id", "name", "version", "apiVersion", "entry", "settings"],

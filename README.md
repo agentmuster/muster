@@ -2,7 +2,7 @@
 
 One app for all your AI agents and their sessions. Muster runs on an always-on desktop and you use it from anywhere, including your phone. Search your Pi, Claude Code and Codex history, continue or split any session, run managed Pi threads with cited context, and take over the desktop's BrowserOS browser when an agent needs you.
 
-The code is at [github.com/rampradeep84/muster](https://github.com/rampradeep84/muster), and modules for other services are at [muster-modules](https://github.com/rampradeep84/muster-modules). The npm package name is `agentmuster`.
+Website: [agentmuster.com](https://agentmuster.com). Modules for other services are in [muster-modules](https://github.com/agentmuster/muster-modules).
 
 The frontend uses CopilotKit. Its runtime and the session index run locally. Model requests still go to the provider configured in your installed Pi account. Selected historical excerpts travel with those requests. Nothing sends the full index to an embedding or hosted CopilotKit service.
 
@@ -110,7 +110,7 @@ Modules connect Muster to other services. A module can add:
 - **tools** the agent can call while it works, such as searching Teams;
 - **providers** for Muster features, such as reviewing and merging pull requests.
 
-Muster ships with no modules. Install them from **⋮ → Modules → Browse**, which lists the modules in [muster-modules](https://github.com/rampradeep84/muster-modules): Bitbucket Pipelines, Bitbucket pull requests and Microsoft Teams so far. Muster fetches that repository with git, using the git credentials on the desktop, so a private repository works too. To list other module repositories, set `MUSTER_MODULE_REGISTRIES` to their git URLs, separated by commas.
+Muster ships with no modules. Install them from **⋮ → Modules → Browse**, which lists the modules in [muster-modules](https://github.com/agentmuster/muster-modules): Bitbucket Pipelines, Bitbucket pull requests and Microsoft Teams so far. Muster fetches that repository with git, using the git credentials on the desktop, so a private repository works too. To list other module repositories, set `MUSTER_MODULE_REGISTRIES` to their git URLs, separated by commas.
 
 **Install** fetches the module and shows what it can reach before anything is installed:
 

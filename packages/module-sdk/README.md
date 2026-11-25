@@ -14,7 +14,7 @@ import {createTestContext} from '@agentmuster/module-sdk/testing';
 For editor checks, point your manifest at the schema:
 
 ```json
-{"$schema": "https://raw.githubusercontent.com/rampradeep84/muster/main/packages/module-sdk/manifest.schema.json"}
+{"$schema": "https://raw.githubusercontent.com/agentmuster/muster/main/packages/module-sdk/manifest.schema.json"}
 ```
 
-See the modules repository, [muster-modules](https://github.com/rampradeep84/muster-modules), for examples and a template.
+See the modules repository, [muster-modules](https://github.com/agentmuster/muster-modules), for examples and a template.

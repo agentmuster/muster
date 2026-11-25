@@ -26,7 +26,7 @@ import {loadManifest, type Manifest, type Modules} from './modules.js';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 export const SDK_DIR = path.join(ROOT, 'packages', 'module-sdk');
-export const OFFICIAL_REGISTRY = 'https://github.com/rampradeep84/muster-modules';
+export const OFFICIAL_REGISTRY = 'https://github.com/agentmuster/muster-modules';
 const ID = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const STAGE_TTL_MS = 15 * 60_000;
 const REGISTRY_TTL_MS = 15 * 60_000;

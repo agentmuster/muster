@@ -5,11 +5,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rampradeep84/muster.git"
+    "url": "git+https://github.com/agentmuster/muster.git"
   },
-  "homepage": "https://github.com/rampradeep84/muster",
+  "homepage": "https://agentmuster.com",
   "bugs": {
-    "url": "https://github.com/rampradeep84/muster/issues"
+    "url": "https://github.com/agentmuster/muster/issues"
   },
   "engines": {
     "node": ">=22.23"

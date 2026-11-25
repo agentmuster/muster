@@ -10,5 +10,5 @@
     "./manifest.schema.json": "./manifest.schema.json"
   },
   "files": ["index.ts", "testing.ts", "manifest.schema.json", "README.md"],
-  "repository": {"type": "git", "url": "git+https://github.com/rampradeep84/muster.git", "directory": "packages/module-sdk"}
+  "repository": {"type": "git", "url": "git+https://github.com/agentmuster/muster.git", "directory": "packages/module-sdk"}
 }
