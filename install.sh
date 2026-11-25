@@ -136,6 +136,18 @@ main() {
     if [ ! -d "$data" ] && [ -d "$HOME/.local/share/meta-agent" ]; then data="$HOME/.local/share/meta-agent"; fi
   fi
 
+  # An existing install keeps its port. Anything else already listening there would clash with the service.
+  if [ -f "$dir/.env" ] && grep -q '^PORT=' "$dir/.env"; then port="$(grep '^PORT=' "$dir/.env" | tail -n 1 | cut -d= -f2)"; fi
+  if [ "$want_service" = 1 ] && (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
+    local ours=0
+    if [ "$os" = macos ]; then
+      launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1 && ours=1
+    else
+      systemctl --user is-active --quiet muster 2>/dev/null && ours=1
+    fi
+    [ "$ours" = 1 ] || fail "Something is already using port $port. Run again with MUSTER_PORT set to a free port, for example MUSTER_PORT=47900."
+  fi
+
   local updating=0
   if [ -d "$dir/.git" ]; then
     updating=1
@@ -171,7 +183,6 @@ main() {
   set_default PORT "$port"
   set_default PYTHON "$dir/.venv/bin/python"
   set_default PI_BIN "$pi"
-  port="$(grep '^PORT=' .env | tail -n 1 | cut -d= -f2)"
 
   step "Linking the agentmuster command into $bin_dir"
   mkdir -p "$bin_dir"
@@ -192,9 +203,6 @@ main() {
       local domain="gui/$(id -u)"
       local loaded=0
       launchctl print "$domain/$label" >/dev/null 2>&1 && loaded=1
-      if [ "$loaded" = 0 ] && curl -fsS -o /dev/null --max-time 2 "$url/api/health" 2>/dev/null; then
-        fail "Something is already running on port $port. Run again with MUSTER_PORT set to a free port."
-      fi
       step "Starting Muster as a login service ($label)"
       mkdir -p "$(dirname "$plist")"
       cat >"$plist" <<PLIST
@@ -225,9 +233,6 @@ PLIST
       service_ok=1
     elif command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
       local unit="$HOME/.config/systemd/user/muster.service"
-      if ! systemctl --user is-active --quiet muster && curl -fsS -o /dev/null --max-time 2 "$url/api/health" 2>/dev/null; then
-        fail "Something is already running on port $port. Run again with MUSTER_PORT set to a free port."
-      fi
       step "Starting Muster as a systemd user service (muster)"
       mkdir -p "$(dirname "$unit")"
       cat >"$unit" <<UNIT
