@@ -16,16 +16,24 @@ You need macOS (Linux is untested), git, Node 22.23+, Python 3.9+ and [Pi](https
 
 ## Use it from your phone
 
-Muster only listens on `127.0.0.1`, so remote access goes through a proxy that signs you in first. Don't open the port to the internet.
+Muster only listens on `127.0.0.1`, so another device reaches it through a tunnel. Don't open the port to the internet. Both options below use Cloudflare's free `cloudflared` (`brew install cloudflared`).
 
-With **Cloudflare Tunnel and Access** (the tested setup):
+**No domain? Use a quick tunnel.** It needs no Cloudflare account.
 
-1. Create a tunnel with `cloudflared` that sends a hostname, say `muster.example.com`, to `http://127.0.0.1:47831`.
+1. Run `cloudflared tunnel --url http://127.0.0.1:47831`. It prints an address like `https://some-random-words.trycloudflare.com`.
+2. Allow that hostname: `echo some-random-words.trycloudflare.com >> ~/.local/share/muster/allowed-hosts`
+3. Open the address on your phone and sign in with your Muster password.
+
+The address changes every time `cloudflared` restarts, so you repeat step 2 and open the new one. Nothing but your Muster password stands in front of it, so keep the terminal off. Cloudflare offers quick tunnels for trying things out, without an uptime guarantee. If you have a `~/.cloudflared/config.yml`, move it aside first, or `cloudflared` runs that tunnel instead.
+
+**Have a domain on Cloudflare? Use a named tunnel with Access.** This is the setup for everyday use: a fixed address, and Cloudflare checks your email before anyone reaches Muster.
+
+1. Create a named tunnel with `cloudflared` that sends a hostname, say `muster.example.com`, to `http://127.0.0.1:47831`.
 2. In Cloudflare Zero Trust, add an Access application for that hostname that allows only your email.
-3. Allow the hostname in Muster: `echo muster.example.com >> ~/.local/share/muster/allowed-hosts`
+3. Allow the hostname: `echo muster.example.com >> ~/.local/share/muster/allowed-hosts`
 4. Open it on your phone and add it to the Home Screen. It runs full screen like an app.
 
-**Tailscale** or another private network should work the same way: allow the address you'll use in step 3. [Remote access in detail](docs/remote-access.md), including signing in with your Cloudflare identity instead of the password.
+Either way, also set `MUSTER_TRUST_CF_CONNECTING_IP=1` in `~/.muster/.env` and run `agentmuster restart`, so failed sign-ins are counted per visitor instead of locking everyone out. **Tailscale** or another private network should work too: allow the address you'll use. [Remote access in detail](docs/remote-access.md), including signing in with your Cloudflare identity instead of the password.
 
 ## What it does
 
