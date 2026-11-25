@@ -291,6 +291,7 @@ UNIT
     printf '  Password    cat %s   (written on first start)\n' "$data/initial-password.txt"
   fi
   printf '  Commands    agentmuster help\n'
+  printf '  Pi tools    pi install %s/pi-session-memory   lets Pi search your sessions in any terminal too\n' "$dir"
   printf '  Update      run the same install command again, or: agentmuster update\n'
   case ":$PATH:" in
     *":$bin_dir:"*) ;;

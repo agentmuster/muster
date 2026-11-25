@@ -8,7 +8,9 @@ import path from 'node:path';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const INDEXER = process.env.SESSION_MEMORY_INDEXER || path.resolve(HERE, '../engine/indexer.py');
-const PYTHON = process.env.SESSION_MEMORY_PYTHON || process.env.PYTHON || 'python3';
+// An installed Muster keeps NumPy and scikit-learn in its own virtual environment.
+const VENV_PYTHON = path.resolve(HERE, '../.venv/bin/python');
+const PYTHON = process.env.SESSION_MEMORY_PYTHON || process.env.PYTHON || (existsSync(VENV_PYTHON) ? VENV_PYTHON : 'python3');
 /** Muster's data folder: MUSTER_DATA_DIR (or the older META_DATA_DIR), else the default, or the old default if only it exists. */
 function dataDir() {
   const configured = process.env.MUSTER_DATA_DIR || process.env.META_DATA_DIR;

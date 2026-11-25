@@ -52,6 +52,16 @@ Managed threads run your normal Pi setup: the extensions and packages in `~/.pi/
 
 The model comes from your Pi defaults unless you pick one in the thread's ⋯ menu. The model and thinking level you choose are saved per device and apply to the next message; the server only accepts models listed by `pi --list-models`.
 
+## Let Pi search your sessions
+
+Muster includes a Pi package, `pi-session-memory`, that lets the agent look up earlier sessions itself. Install it once:
+
+```sh
+pi install ~/.muster/pi-session-memory
+```
+
+Pi then has three read-only tools, in Muster threads and in any terminal Pi: `past_sessions_search` (keywords, a ticket id, a project or an error message), `past_sessions_recent` (the latest sessions, optionally in one folder), and `past_session_read` (one session's start, the parts matching a query, and where it ended). A skill tells the agent to use them before working something out again. They read Muster's index, so Muster needs to have indexed your sessions at least once. For other tools and scripts, the same lookups work from the command line: `node ~/.muster/pi-session-memory/bin/session-memory.mjs search "<words>"`.
+
 ## Files from the desktop
 
 Files the agent writes or edits in a thread are listed in its **Files** panel, the document button in the thread header. For files made any other way, such as a script's output, a converted PDF or an archive, the agent calls its `share_file` tool. Paths of listed files in chat messages become links that open the file.

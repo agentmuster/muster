@@ -1,6 +1,6 @@
 # Muster
 
-One app for all your coding agents. Muster runs on your own computer and you use it from anywhere, including your phone: search every Pi, Claude Code and Codex session you've had, pick one up where it stopped, and run new Pi work with its context.
+Your agents' history and your work queue, in one place. Muster indexes every Claude Code, Codex and Pi session on your computer, so you and your agents can find what was decided last week and carry on from there. The Teams requests and pull requests waiting on you sit beside them. New work runs through Pi, and all of it works from your phone.
 
 [agentmuster.io](https://agentmuster.io) · [Modules](https://github.com/agentmuster/muster-modules) · MIT
 
@@ -39,20 +39,20 @@ Either way, also set `MUSTER_TRUST_CF_CONNECTING_IP=1` in `~/.muster/.env` and r
 
 <table>
 <tr>
-<td width="25%" valign="top"><img src="docs/images/history.webp" alt="History search"><br><b>Every session, searchable.</b> Pi, Claude Code and Codex history in one local index. Continue, split or start fresh with context.</td>
+<td width="25%" valign="top"><img src="docs/images/history.webp" alt="History search"><br><b>Every session, searchable.</b> Claude Code, Codex and Pi history in one local index. Continue, split or start fresh with context.</td>
+<td width="25%" valign="top"><img src="docs/images/inbox.webp" alt="Inbox"><br><b>Teams requests.</b> Messages meant for you, grouped into requests. Start a session from any of them.</td>
+<td width="25%" valign="top"><img src="docs/images/review.webp" alt="Pull request review"><br><b>Review and merge PRs.</b> Read the agent's diff, sign off and merge without leaving the thread.</td>
 <td width="25%" valign="top"><img src="docs/images/thread.webp" alt="A Pi thread"><br><b>Pi threads on any screen.</b> Runs keep going when you close the tab. Queue the next message while it works.</td>
-<td width="25%" valign="top"><img src="docs/images/changes.webp" alt="Code changes"><br><b>See what changed.</b> Every file the agent edited, as a diff.</td>
-<td width="25%" valign="top"><img src="docs/images/review.webp" alt="Pull request review"><br><b>Review and merge PRs.</b> Read the diff, sign off and merge without leaving the thread.</td>
 </tr>
 <tr>
 <td valign="top"><img src="docs/images/question.webp" alt="A question from the agent"><br><b>Answer the agent.</b> Its questions show up as cards you tap.</td>
 <td valign="top"><img src="docs/images/background.webp" alt="Background subagents"><br><b>Background agents.</b> Subagents and workflows keep running, and report back to the thread.</td>
-<td valign="top"><img src="docs/images/inbox.webp" alt="Inbox"><br><b>Inbox.</b> Teams messages grouped into requests, each one a tap away from a session.</td>
+<td valign="top"><img src="docs/images/changes.webp" alt="Code changes"><br><b>See what changed.</b> Every file the agent edited, as a diff.</td>
 <td valign="top"><img src="docs/images/terminal.webp" alt="Terminal"><br><b>Terminal.</b> A shell on your computer, from the browser. Off until you turn it on.</td>
 </tr>
 </table>
 
-When an agent needs a sign-in, you can take over its [BrowserOS](https://www.browseros.com) browser from your phone and hand it back. Everything runs on your computer; model requests go to the provider your Pi uses. [Full guide](docs/guide.md).
+Your agents can search those sessions too: `pi install ~/.muster/pi-session-memory` gives Pi tools to search and read them, in Muster or in any terminal. When an agent needs a sign-in, you can take over its [BrowserOS](https://www.browseros.com) browser from your phone and hand it back. Everything runs on your computer; model requests go to the provider your Pi uses. [Full guide](docs/guide.md).
 
 ## Modules
 
