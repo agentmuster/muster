@@ -37,7 +37,7 @@ main() {
     exit 1
   }
 
-  log="$(mktemp -t muster-install.XXXXXX)"
+  log=""
   # Runs a command quietly; on failure shows the end of its output and where the full log is.
   quiet() {
     if ! "$@" >>"$log" 2>&1; then
@@ -147,6 +147,9 @@ main() {
     fi
     [ "$ours" = 1 ] || fail "Something is already using port $port. Run again with MUSTER_PORT set to a free port, for example MUSTER_PORT=47900."
   fi
+
+  # Kept only when a step fails, so its output can be read.
+  log="$(mktemp "${TMPDIR:-/tmp}/muster-install.XXXXXX")"
 
   local updating=0
   if [ -d "$dir/.git" ]; then
