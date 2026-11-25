@@ -87,7 +87,8 @@ before(async () => {
     },
     stdio: 'ignore',
   });
-  for (let i = 0; i < 100; i++) {
+  // Up to 30 seconds: every test file starts at once, so the server can be slow to compile and start.
+  for (let i = 0; i < 300; i++) {
     try {
       if ((await fetch(base + '/api/health')).ok) return;
     } catch {
