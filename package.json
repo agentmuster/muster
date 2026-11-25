@@ -14,12 +14,16 @@
   "engines": {
     "node": ">=22.23"
   },
+  "bin": {
+    "agentmuster": "bin/agentmuster.mjs"
+  },
   "files": [
+    "bin/",
+    "packages/",
     "dist/",
     "server/",
     "shared/",
     "engine/",
-    "modules/",
     "pi-session-memory/",
     "scripts/rotate-password.ts",
     "requirements.txt",
@@ -42,7 +46,8 @@
     "index": "python3 engine/indexer.py index",
     "smoke:pi": "node scripts/smoke-pi.mjs",
     "smoke:browser": "node scripts/smoke-browser.mjs",
-    "rotate-password": "tsx scripts/rotate-password.ts"
+    "rotate-password": "tsx scripts/rotate-password.ts",
+    "module": "node bin/agentmuster.mjs module"
   },
   "dependencies": {
     "@ag-ui/client": "1.0.5",

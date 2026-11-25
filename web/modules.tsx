@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'react';
 import {createPortal} from 'react-dom';
+import {Browse, Consent, InstalledInfo, type InstallInfo, type InstallPreview} from './module-store';
 
 // Settings → Modules, and the Actions panel that runs module actions with a preview first.
 
@@ -27,9 +28,10 @@ export type ModuleInfo = {
   actions: {id: string; title: string; description?: string; confirm: string}[];
   network: string[];
   feeds?: {id: string; title: string; every: number}[];
+  providers?: {pullRequests?: {links: {host: string; path: string}[]; mergeAction: string}};
   tools?: string[];
   connectors?: string[];
-  local: boolean;
+  install?: InstallInfo;
 };
 export type ModuleRun = {
   id: string;
@@ -144,6 +146,7 @@ function offers(module: ModuleInfo) {
   if (module.actions.length) parts.push(module.actions.length === 1 ? module.actions[0].title : `${module.actions.length} actions`);
   if (module.feeds?.length) parts.push('Inbox');
   if (module.tools?.length) parts.push('agent tools');
+  if (module.providers?.pullRequests) parts.push('pull requests');
   return parts.join(' · ');
 }
 
@@ -151,10 +154,16 @@ function offers(module: ModuleInfo) {
 export function ModulesSettings(props: {api: Api; close: () => void; changed: (modules: ModuleInfo[]) => void; initial?: string}) {
   const [modules, setModules] = useState<ModuleInfo[] | null>(null);
   const [picked, setPicked] = useState(props.initial ?? '');
+  const [tab, setTab] = useState<'installed' | 'browse'>('installed');
+  const [review, setReview] = useState<InstallPreview | null>(null);
+  const [installing, setInstalling] = useState(false);
+  const [installDisabled, setInstallDisabled] = useState(false);
+  const [notice, setNotice] = useState('');
   const [drafts, setDrafts] = useState<Record<string, {values: Record<string, unknown>; secrets: Record<string, string>}>>({});
   const [status, setStatus] = useState<Record<string, string>>({});
   const load = async () => {
     const data = await props.api('/modules');
+    setInstallDisabled(!!data.installDisabled);
     setModules(data.modules);
     props.changed(data.modules);
     setDrafts(Object.fromEntries(data.modules.map((m: ModuleInfo) => [m.id, {values: {...m.values}, secrets: {}}])));
@@ -178,16 +187,65 @@ export function ModulesSettings(props: {api: Api; close: () => void; changed: (m
       setStatus(s => ({...s, [module.id]: error.message}));
     }
   };
+  const replaced = (list: ModuleInfo[]) => {
+    setModules(list);
+    props.changed(list);
+    setDrafts(d => ({...Object.fromEntries(list.map(m => [m.id, {values: {...m.values}, secrets: {}}])), ...d}));
+  };
+  const install = async () => {
+    if (!review) return;
+    setInstalling(true);
+    try {
+      const data = await props.api('/modules/install', {token: review.token});
+      replaced(data.modules);
+      setDrafts(d => ({...d, [data.id]: {values: {...(data.modules.find((m: ModuleInfo) => m.id === data.id)?.values ?? {})}, secrets: {}}}));
+      setReview(null);
+      setNotice(data.updated ? `Updated to ${data.version}.` : 'Installed. Fill in its settings, then turn it on.');
+      setTab('installed');
+      setPicked(data.id);
+    } catch (error: any) {
+      setStatus(s => ({...s, all: error.message}));
+      setReview(null);
+    } finally {
+      setInstalling(false);
+    }
+  };
   const chosen = modules?.find(module => module.id === picked);
   return (
-    <Modal title={chosen ? chosen.name : 'Modules'} close={props.close} wide>
+    <Modal title={review ? 'Review module' : chosen ? chosen.name : 'Modules'} close={props.close} wide>
       {status.all && <p className="run-error">{status.all}</p>}
       {!modules ? (
         <p className="muted">Loading…</p>
-      ) : !modules.length ? (
-        <p className="muted">No modules installed. Add folders with a muster-module.json to ~/.config/muster/modules.</p>
+      ) : review ? (
+        <Consent preview={review} busy={installing} install={() => void install()} cancel={() => setReview(null)} />
       ) : !chosen ? (
         <>
+          <div className="files-tabs" role="tablist">
+            <button role="tab" aria-selected={tab === 'installed'} className={tab === 'installed' ? 'active' : ''} onClick={() => setTab('installed')}>
+              Installed <span>{modules.length}</span>
+            </button>
+            <button role="tab" aria-selected={tab === 'browse'} className={tab === 'browse' ? 'active' : ''} onClick={() => setTab('browse')}>
+              Browse
+            </button>
+          </div>
+          {tab === 'browse' ? (
+            <Browse
+              api={props.api}
+              disabled={installDisabled}
+              review={preview => {
+                setStatus(s => ({...s, all: ''}));
+                setReview(preview);
+              }}
+            />
+          ) : !modules.length ? (
+            <p className="muted">
+              No modules yet. Modules connect other services, such as Teams, Bitbucket deploys and pull requests.{' '}
+              <button className="quiet" onClick={() => setTab('browse')}>
+                Browse modules
+              </button>
+            </p>
+          ) : (
+          <>
           <p className="muted">Modules connect other services. Pick one to turn it on or change its settings.</p>
           <ul className="module-picker">
             {modules.map(module => (
@@ -211,21 +269,29 @@ export function ModulesSettings(props: {api: Api; close: () => void; changed: (m
               </li>
             ))}
           </ul>
+          </>
+          )}
         </>
       ) : (
         [chosen].map(module => {
           const draft = drafts[module.id] ?? {values: {}, secrets: {}};
           return (
             <section key={module.id} className={'module-card' + (module.enabled ? ' on' : '')}>
-              <button className="quiet module-back" onClick={() => setPicked('')}>
+              <button
+                className="quiet module-back"
+                onClick={() => {
+                  setPicked('');
+                  setNotice('');
+                }}
+              >
                 ← All modules
               </button>
+              {notice && <p className="module-notice">{notice}</p>}
               <header>
                 <div>
                   <strong>{module.name}</strong>
                   <small className="muted">
-                    {module.version}
-                    {module.local ? ' · local' : ''} · can contact {module.network.join(', ') || 'nothing'}
+                    {module.version} · can contact {module.network.join(', ') || 'nothing'}
                     {module.connectors?.includes('composio') ? ' · through the Composio CLI' : ''}
                     {module.feeds?.length ? ` · Inbox: checks ${module.feeds.map(f => f.title).join(', ')} every ${module.feeds[0].every} min` : ''}
                     {module.tools?.length ? ` · agent tools: ${module.tools.join(', ')}` : ''}
@@ -260,6 +326,15 @@ export function ModulesSettings(props: {api: Api; close: () => void; changed: (m
                 </button>
                 <span className="muted">{status[module.id] || (module.missing.length ? 'Needs: ' + module.missing.join(', ') : '')}</span>
               </div>
+              <InstalledInfo
+                api={props.api}
+                id={module.id}
+                name={module.name}
+                install={module.install}
+                disabled={installDisabled}
+                changed={replaced}
+                removed={() => setPicked('')}
+              />
             </section>
           );
         })

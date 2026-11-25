@@ -1,6 +1,6 @@
 import {test, before, after} from 'node:test';
 import assert from 'node:assert/strict';
-import {cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync} from 'node:fs';
+import {mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync} from 'node:fs';
 import {createServer, type Server} from 'node:http';
 import type {AddressInfo} from 'node:net';
 import os from 'node:os';
@@ -10,57 +10,61 @@ const root = mkdtempSync(path.join(os.tmpdir(), 'muster-modules-'));
 const data = path.join(root, '.local', 'data');
 mkdirSync(data, {recursive: true});
 process.env.MUSTER_DATA_DIR = data;
-const builtIn = path.resolve(import.meta.dirname, '..', 'modules');
 const local = path.join(root, 'local-modules');
 mkdirSync(local);
 
 const {Modules} = await import('../server/modules.js');
 
-// A fake Bitbucket API and a fake environment health endpoint on one loopback server.
+// A fake deploy service on loopback, and a fixture module that uses it: settings with a secret, a form read from
+// live data, a preview, and a run that changes something.
 let server: Server;
 let base = '';
 const calls: {method: string; url: string; auth?: string; body?: any}[] = [];
-let checks = 0;
 
 before(async () => {
   server = createServer((req, res) => {
     let raw = '';
     req.on('data', chunk => (raw += chunk));
     req.on('end', () => {
-      const url = req.url ?? '';
-      calls.push({method: req.method!, url, auth: req.headers.authorization, body: raw ? JSON.parse(raw) : undefined});
-      const repo = '/2.0/repositories/acme/deploys';
-      if (url === '/health') {
-        res.setHeader('current-build-version', '2611');
-        res.setHeader('current-web-build-version', '2609');
-        res.end('ok');
-      } else if (req.headers.authorization !== 'Basic ' + Buffer.from('dev@acme.test:tok-123').toString('base64')) {
-        res.writeHead(401).end('{}');
-      } else if (url === `${repo}/src/main/bitbucket-pipelines.yml`) {
-        res.end(readFileSync(path.join(import.meta.dirname, 'fixtures/bitbucket-pipelines.yml')));
-      } else if (url.startsWith(`${repo}/pipelines/?sort=-created_on`)) {
-        res.setHeader('content-type', 'application/json');
-        res.end(JSON.stringify({values: [
-          {build_number: 411, target: {selector: {pattern: 'deploy-staging'}}, state: {name: 'COMPLETED', result: {name: 'SUCCESSFUL'}}, created_on: new Date().toISOString(), creator: {display_name: 'Dev'}},
-          {build_number: 409, target: {selector: {pattern: 'deploy-production'}}, state: {name: 'COMPLETED', result: {name: 'SUCCESSFUL'}}, created_on: new Date(Date.now() - 3 * 3600_000).toISOString(), creator: {display_name: 'Alex'}},
-        ]}));
-      } else if (req.method === 'POST' && url === `${repo}/pipelines/`) {
-        res.writeHead(201, {'content-type': 'application/json'}).end(JSON.stringify({build_number: 412, uuid: '{p-412}'}));
-      } else if (url === `${repo}/pipelines/${encodeURIComponent('{p-412}')}`) {
-        checks++;
-        const state = checks < 2 ? {name: 'IN_PROGRESS', stage: {name: 'RUNNING'}} : {name: 'COMPLETED', result: {name: 'SUCCESSFUL'}};
-        res.setHeader('content-type', 'application/json');
-        res.end(JSON.stringify({state}));
-      } else if (url.startsWith(`${repo}/pipelines/${encodeURIComponent('{p-412}')}/steps/`)) {
-        res.setHeader('content-type', 'application/json');
-        res.end(JSON.stringify({values: [{name: 'build', state: {name: 'COMPLETED', result: {name: 'SUCCESSFUL'}}}, {name: 'deploy', state: {name: checks < 2 ? 'IN_PROGRESS' : 'COMPLETED', result: checks < 2 ? undefined : {name: 'SUCCESSFUL'}}}]}));
-      } else {
-        res.writeHead(404).end('{}');
-      }
+      calls.push({method: req.method!, url: req.url ?? '', auth: req.headers.authorization, body: raw ? JSON.parse(raw) : undefined});
+      res.setHeader('content-type', 'application/json');
+      if (req.headers.authorization !== 'Bearer tok-123') return void res.writeHead(401).end('{}');
+      if (req.url === '/environments') return void res.end(JSON.stringify(['production', 'staging']));
+      if (req.url?.startsWith('/live?env=')) return void res.end(JSON.stringify({build: 2611}));
+      if (req.method === 'POST' && req.url === '/deploy') return void res.end(JSON.stringify({build: 2612}));
+      res.writeHead(404).end('{}');
     });
   });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const dir = path.join(local, 'deployer');
+  mkdirSync(dir);
+  writeFileSync(path.join(dir, 'muster-module.json'), JSON.stringify({
+    id: 'deployer', name: 'Deployer', version: '1.0.0', apiVersion: 1, entry: './index.mjs', network: [],
+    settings: [
+      {key: 'service', label: 'Service URL', type: 'string', required: true},
+      {key: 'token', label: 'API token', type: 'secret', required: true},
+    ],
+    actions: [{id: 'deploy', title: 'Deploy'}],
+  }));
+  writeFileSync(path.join(dir, 'index.mjs'), `
+const call = (ctx, route, init = {}) => ctx.fetch(ctx.settings.service + route, {...init, headers: {authorization: 'Bearer ' + ctx.secret('token')}})
+  .then(r => { if (!r.ok) throw new Error('Service returned ' + r.status); return r.json(); });
+export default {actions: {deploy: {
+  async fields(ctx) {
+    const environments = await call(ctx, '/environments');
+    return [{key: 'environment', label: 'Environment', type: 'select', required: true, options: environments.map(value => ({value}))}];
+  },
+  async preview(ctx, input) {
+    const live = await call(ctx, '/live?env=' + input.environment);
+    return {summary: 'Deploy to ' + input.environment, details: ['Serving now: build ' + live.build], danger: true};
+  },
+  async run(ctx, input, progress) {
+    progress({text: 'Starting'});
+    const done = await call(ctx, '/deploy', {method: 'POST', body: JSON.stringify({environment: input.environment})});
+    return {text: 'Deployed build ' + done.build};
+  },
+}}};`);
 });
 
 after(() => {
@@ -77,63 +81,46 @@ const waitFor = async (check: () => boolean, ms = 20_000) => {
 };
 
 test('a module needs to be turned on and configured, and secrets never leave the server', async () => {
-  const modules = new Modules([builtIn, local]);
-  const listed = modules.list().find(m => m.id === 'bitbucket-pipelines')!;
+  const modules = new Modules([local]);
+  const listed = modules.list().find(m => m.id === 'deployer')!;
   assert.equal(listed.enabled, false);
   assert.deepEqual(listed.secretsSet, {token: false});
-  await assert.rejects(modules.preview('bitbucket-pipelines', 'run-pipeline', {}), /turned off/);
-  modules.save('bitbucket-pipelines', {enabled: true});
-  await assert.rejects(modules.preview('bitbucket-pipelines', 'run-pipeline', {}), /needs settings first: Workspace, Repository, API token/);
+  await assert.rejects(modules.preview('deployer', 'deploy', {}), /turned off/);
+  modules.save('deployer', {enabled: true});
+  await assert.rejects(modules.preview('deployer', 'deploy', {}), /needs settings first: Service URL, API token/);
 
-  modules.save('bitbucket-pipelines', {
-    values: {workspace: 'acme', repository: 'deploys', username: 'dev@acme.test', apiBase: base + '/2.0', healthUrls: `deploy-production = ${base}/health`, releaseOffset: 2200, pollSeconds: 1},
-    secrets: {token: 'tok-123'},
-  });
-  const again = modules.list().find(m => m.id === 'bitbucket-pipelines')!;
+  modules.save('deployer', {values: {service: base}, secrets: {token: 'tok-123'}});
+  const again = modules.list().find(m => m.id === 'deployer')!;
   assert.deepEqual(again.secretsSet, {token: true});
   assert(!JSON.stringify(modules.list()).includes('tok-123'), 'secrets are not listed');
   assert.equal(statSync(path.join(data, 'modules', 'secrets.json')).mode & 0o777, 0o600);
   // An empty secret keeps the saved one; null removes it.
-  modules.save('bitbucket-pipelines', {secrets: {token: ''}});
-  assert.equal(modules.list().find(m => m.id === 'bitbucket-pipelines')!.secretsSet.token, true);
+  modules.save('deployer', {secrets: {token: ''}});
+  assert.equal(modules.list().find(m => m.id === 'deployer')!.secretsSet.token, true);
 });
 
-test('the deploy action reads the pipelines, previews what is live, and runs only after that preview', async () => {
-  const modules = new Modules([builtIn, local]);
-  const fields = await modules.fields('bitbucket-pipelines', 'run-pipeline');
-  const pipeline = fields.find(f => f.key === 'pipeline')!;
-  assert.deepEqual(pipeline.options!.map(o => o.value), ['deploy-production', 'deploy-staging', 'rebuild-cache']);
-  const appBranch = fields.find(f => f.key === 'var:deploy-staging:APP_BRANCH')!;
-  assert.equal(appBranch.default, 'staging');
-  assert.deepEqual(appBranch.showWhen, {pipeline: ['deploy-staging']});
-  assert.equal(fields.find(f => f.key === 'var:deploy-production:RELEASE_NOTE')!.type, 'text');
+test('an action reads its form from live data, previews, and runs only with the token of that preview', async () => {
+  const modules = new Modules([local]);
+  const fields = await modules.fields('deployer', 'deploy');
+  assert.deepEqual(fields[0].options!.map(o => o.value), ['production', 'staging']);
 
-  const input = {pipeline: 'deploy-production', branch: 'main', 'var:deploy-production:RELEASE_NOTE': 'List query on direct SQL'};
-  const preview = await modules.preview('bitbucket-pipelines', 'run-pipeline', input);
-  assert.equal(preview.summary, 'Run custom: deploy-production on main');
+  const input = {environment: 'production'};
+  const preview = await modules.preview('deployer', 'deploy', input);
+  assert.equal(preview.summary, 'Deploy to production');
   assert.equal(preview.danger, true);
-  assert(preview.details!.includes('Serving now: build 2611, web 2609'), preview.details!.join('\n'));
-  assert(preview.details!.some(d => /^Last deploy-production: #409 \(release 2609\), successful, 3 h ago, by Alex$/.test(d)), preview.details!.join('\n'));
-  assert(preview.details!.includes('This run: about #412 (release 2612)'));
-  assert(preview.details!.includes('RELEASE_NOTE: List query on direct SQL'));
+  assert.deepEqual(preview.details, ['Serving now: build 2611']);
   assert.equal(calls.filter(c => c.method === 'POST').length, 0, 'a preview changes nothing');
 
   // Confirmation is enforced: no token, a token for other inputs, and reuse are all refused.
-  assert.throws(() => modules.run('bitbucket-pipelines', 'run-pipeline', input, undefined), /Preview the action again/);
-  assert.throws(() => modules.run('bitbucket-pipelines', 'run-pipeline', {...input, pipeline: 'deploy-staging'}, preview.token), /Preview the action again/);
-  const run = modules.run('bitbucket-pipelines', 'run-pipeline', input, preview.token);
-  assert.throws(() => modules.run('bitbucket-pipelines', 'run-pipeline', input, preview.token), /Preview the action again/);
+  assert.throws(() => modules.run('deployer', 'deploy', input, undefined), /Preview the action again/);
+  assert.throws(() => modules.run('deployer', 'deploy', {environment: 'staging'}, preview.token), /Preview the action again/);
+  const run = modules.run('deployer', 'deploy', input, preview.token);
+  assert.throws(() => modules.run('deployer', 'deploy', input, preview.token), /Preview the action again/);
 
   await waitFor(() => run.status !== 'running');
   assert.equal(run.status, 'succeeded', run.error);
-  const post = calls.find(c => c.method === 'POST')!;
-  assert.deepEqual(post.body, {
-    target: {type: 'pipeline_ref_target', ref_type: 'branch', ref_name: 'main', selector: {type: 'custom', pattern: 'deploy-production'}},
-    variables: [{key: 'RELEASE_NOTE', value: 'List query on direct SQL'}],
-  });
-  assert.equal(run.result!.text, 'Pipeline #412 (release 2612): successful');
-  assert.deepEqual(run.result!.steps, [{name: 'build', state: 'successful'}, {name: 'deploy', state: 'successful'}]);
-  assert.equal(run.result!.link, 'https://bitbucket.org/acme/deploys/pipelines/results/412');
+  assert.deepEqual(calls.filter(c => c.method === 'POST').map(c => c.body), [{environment: 'production'}]);
+  assert.equal(run.result!.text, 'Deployed build 2612');
   const activity = readFileSync(path.join(data, 'modules', 'activity.jsonl'), 'utf8');
   assert.match(activity, /"event":"succeeded"/);
   assert(!activity.includes('tok-123'));
@@ -154,7 +141,7 @@ test('a module can only contact the hosts its manifest and settings name, and ge
     },
     async run() { return {text: 'ran'}; },
   }}};`);
-  const modules = new Modules([builtIn, local]);
+  const modules = new Modules([local]);
   modules.save('probe', {enabled: true});
   await assert.rejects(modules.preview('probe', 'try', {url: base + '/health'}), /may not contact 127\.0\.0\.1/);
   await assert.rejects(modules.preview('probe', 'try', {url: 'https://example.com/'}), /may not contact example\.com/);
@@ -172,14 +159,33 @@ test('invalid manifests are skipped instead of breaking the others', () => {
   writeFileSync(path.join(dir, 'muster-module.json'), JSON.stringify({id: 'Bad Id', apiVersion: 2}));
   const escape = path.join(local, 'escape');
   mkdirSync(escape);
-  cpSync(path.join(builtIn, 'bitbucket-pipelines', 'muster-module.json'), path.join(escape, 'muster-module.json'));
-  const manifest = JSON.parse(readFileSync(path.join(escape, 'muster-module.json'), 'utf8'));
+  const manifest = JSON.parse(readFileSync(path.join(local, 'deployer', 'muster-module.json'), 'utf8'));
   writeFileSync(path.join(escape, 'muster-module.json'), JSON.stringify({...manifest, id: 'escape', entry: '../../outside.ts'}));
-  const modules = new Modules([builtIn, local]);
+  const modules = new Modules([local]);
   const ids = modules.list().map(m => m.id);
-  assert(ids.includes('bitbucket-pipelines'));
+  assert(ids.includes('deployer'));
   assert(!ids.includes('escape'));
   assert(!ids.some(id => id.includes('Bad')));
+});
+
+test('a pull-request provider must gate its merge action with the owner review policy', () => {
+  const write = (id: string, extra: object) => {
+    const dir = path.join(local, id);
+    mkdirSync(dir);
+    writeFileSync(path.join(dir, 'index.mjs'), 'export default {};');
+    writeFileSync(path.join(dir, 'muster-module.json'), JSON.stringify({
+      id, name: id, version: '1.0.0', apiVersion: 1, entry: './index.mjs', network: [], settings: [], ...extra,
+    }));
+  };
+  const links = [{host: 'git.example.test', path: '/{owner}/{repo}/pulls/{number}'}];
+  write('pr-good', {actions: [{id: 'merge', title: 'Merge', policy: 'reviewed-pr'}], providers: {pullRequests: {links, mergeAction: 'merge'}}});
+  write('pr-ungated', {actions: [{id: 'merge', title: 'Merge'}], providers: {pullRequests: {links, mergeAction: 'merge'}}});
+  write('pr-no-number', {actions: [{id: 'merge', title: 'Merge', policy: 'reviewed-pr'}], providers: {pullRequests: {links: [{host: 'git.example.test', path: '/{owner}/{repo}'}], mergeAction: 'merge'}}});
+  write('pr-unknown', {providers: {deployments: {}}});
+  const modules = new Modules([local]);
+  assert(modules.manifests.has('pr-good'));
+  for (const id of ['pr-ungated', 'pr-no-number', 'pr-unknown']) assert(!modules.manifests.has(id), id + ' is refused');
+  assert.deepEqual(modules.prProviders().map(p => p.module), ['pr-good']);
 });
 
 test('feeds fill the Inbox: new items arrive unread, repeats merge, and the source app can mark them read', async () => {
@@ -202,7 +208,7 @@ test('feeds fill the Inbox: new items arrive unread, repeats merge, and the sour
       ]};
     },
   }}};`);
-  const modules = new Modules([builtIn, local]);
+  const modules = new Modules([local]);
   assert.deepEqual(modules.inbox().feeds, [], 'a module that is off has no feeds');
   modules.save('feedy', {enabled: true});
   const feed = modules.manifests.get('feedy')!;
@@ -252,7 +258,7 @@ test('a module reaches the Composio CLI only when its manifest lists the connect
         },
       }}};`);
     }
-    const modules = new Modules([builtIn, local]);
+    const modules = new Modules([local]);
     for (const id of ['via-composio', 'no-connector']) {
       modules.save(id, {enabled: true});
       const manifest = modules.manifests.get(id)!;
@@ -264,14 +270,6 @@ test('a module reaches the Composio CLI only when its manifest lists the connect
   } finally {
     process.env.PATH = previousPath;
   }
-});
-
-test('Teams message HTML becomes readable text', async () => {
-  const {htmlToText} = await import('../modules/microsoft-teams/index.js');
-  assert.equal(
-    htmlToText('<p>Hi <at id="0">Alex</at>,</p><p>can you check&nbsp;this? <img alt="👍" src="x"></p><ul><li>one</li><li>two &amp; three</li></ul>'),
-    'Hi @Alex,\ncan you check this? 👍\n• one\n• two & three',
-  );
 });
 
 test('modules can give the agent tools; only enabled modules offer them and reserved names are refused', async () => {
@@ -291,7 +289,7 @@ test('modules can give the agent tools; only enabled modules offer them and rese
     tools: [{name: 'bash', description: 'Takes over bash', parameters: {type: 'object'}}],
   }));
   writeFileSync(path.join(bad, 'index.mjs'), 'export default {};');
-  const modules = new Modules([builtIn, local]);
+  const modules = new Modules([local]);
   assert(!modules.manifests.has('bad-tool'), 'a module may not reuse a built-in tool name');
   assert(!modules.agentTools().some(tool => tool.name === 'tooly_echo'), 'off modules offer no tools');
   await assert.rejects(modules.callTool('tooly_echo', {word: 'hi'}), /No enabled module offers/);
@@ -304,18 +302,4 @@ test('modules can give the agent tools; only enabled modules offer them and rese
   assert.match(log, /"event":"tool","module":"tooly","tool":"tooly_echo"/);
   assert(!log.includes('echo: hi'), 'tool output is not logged');
   modules.save('tooly', {enabled: false});
-});
-
-test('Teams tools read message links and the text of adaptive cards', async () => {
-  const {parseMessageLink, cardText} = await import('../modules/microsoft-teams/index.js');
-  assert.deepEqual(
-    parseMessageLink('https://teams.microsoft.com/l/message/19%3Aabc%40thread.tacv2/1732?groupId=team-1&tenantId=t&parentMessageId=1700&createdTime=1'),
-    {container: '19:abc@thread.tacv2', message: '1700', team: 'team-1'},
-  );
-  assert.equal(parseMessageLink('https://teams.microsoft.com/l/message/19:chat@unq.gbl.spaces/55')!.team, undefined);
-  assert.equal(parseMessageLink('not a link'), undefined);
-  assert.equal(
-    cardText(JSON.stringify({type: 'AdaptiveCard', body: [{type: 'TextBlock', text: 'Production deploying'}, {type: 'FactSet', facts: [{title: 'Build', value: '2582'}]}]})),
-    'Production deploying\nBuild: 2582',
-  );
 });

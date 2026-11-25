@@ -1,0 +1,14 @@
+{
+  "name": "@agentmuster/module-sdk",
+  "version": "0.1.0",
+  "description": "Types, helpers and a test harness for writing Muster modules.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./index.ts",
+    "./testing": "./testing.ts",
+    "./manifest.schema.json": "./manifest.schema.json"
+  },
+  "files": ["index.ts", "testing.ts", "manifest.schema.json", "README.md"],
+  "repository": {"type": "git", "url": "git+https://github.com/rampradeep84/muster.git", "directory": "packages/module-sdk"}
+}

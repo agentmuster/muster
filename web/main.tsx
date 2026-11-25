@@ -8,7 +8,7 @@ import './style.css';
 import {appendDictation, Dictation, recognitionConstructor, type DictationState} from './dictation';
 import {ActionsPanel, ModulesSettings, type ModuleInfo} from './modules';
 import {InboxList, fillInbox, newRequests, requestPrefill, type InboxData, type InboxItem, type InboxRequest} from './inbox';
-import {sessionPrUrls} from '../shared/pr-links';
+import {sessionPrLinks, type PrProvider} from '../shared/pr-links';
 import {QuestionCard, type PendingQuestion} from './question';
 import {BackgroundButton, BackgroundPanel, BackgroundStrip, backgroundLabel, type ThreadBackground} from './background';
 const PullRequestsPanel = lazy(() => import('./pull-requests'));
@@ -1311,13 +1311,21 @@ function FileRow(props: {thread: Thread; entry: SharedFile; open: () => void; re
   );
 }
 
-function FilesPanel(props: {thread: Thread; open: string; setOpen: (id: string) => void; close: () => void; report: (e: any) => void; openSettings: () => void}) {
+function FilesPanel(props: {
+  thread: Thread;
+  open: string;
+  setOpen: (id: string) => void;
+  close: () => void;
+  report: (e: any) => void;
+  openSettings: (module?: string) => void;
+  providers: PrProvider[];
+}) {
   const {thread} = props;
   const files = [...(thread.files ?? [])].reverse();
   const file = files.find(candidate => candidate.id === props.open);
   const changes = files.filter(entry => fileSection(entry) === 'change');
   const artifacts = files.filter(entry => fileSection(entry) === 'artifact');
-  const prCount = sessionPrUrls(thread.messages).length;
+  const prCount = sessionPrLinks(thread.messages, props.providers).length;
   const [tab, setTab] = useState<'change' | 'artifact' | 'prs'>(() => files.length ? (changes.length ? 'change' : 'artifact') : 'prs');
   const shown = tab === 'change' ? changes : artifacts;
   useEffect(() => {
@@ -2395,7 +2403,9 @@ function App() {
     }),
     [thread?.id, threadBusy, status?.takeover, model, thinking],
   );
-  const prCount = thread ? sessionPrUrls(thread.messages).length : 0;
+  // Pull-request links count only when an installed module provides them, such as Bitbucket pull requests.
+  const prProviders: PrProvider[] = moduleList.filter(m => m.providers?.pullRequests).map(m => ({module: m.id, links: m.providers!.pullRequests!.links}));
+  const prCount = thread ? sessionPrLinks(thread.messages, prProviders).length : 0;
   const chipModel = model || models?.defaults.model || 'Pi default';
   const chipTitle = `Model: ${chipModel} · thinking ${thinking || models?.defaults.thinking || 'default'}. Click to change.`;
   useEffect(() => {
@@ -3093,11 +3103,12 @@ function App() {
           open={filesOpen}
           setOpen={setFilesOpen}
           close={() => setFilesOpen(null)}
-          openSettings={() => {
+          openSettings={module => {
             setFilesOpen(null);
-            setModuleFocus('bitbucket-pull-requests');
+            setModuleFocus(module ?? '');
             setPanel('modules');
           }}
+          providers={prProviders}
           report={(e: any) => setError(e.message)}
         />
       )}

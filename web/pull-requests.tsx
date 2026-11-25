@@ -8,8 +8,8 @@ const DiffView = lazy(() => import('./diff-view'));
 
 type Api = (url: string, body?: unknown) => Promise<any>;
 type Review = {source: string; destination: string; fingerprint: string; at: number};
-type Pr = {key: string; url: string; repository: string; number: string; review?: Review};
-type Data = {configured: boolean; prs: Pr[]};
+type Pr = {key: string; url: string; module: string; moduleName: string; configured: boolean; repository: string; number: string; review?: Review};
+type Data = {providers: {module: string; name: string; configured: boolean}[]; prs: Pr[]};
 type Snapshot = {
   title: string;
   description: string;
@@ -135,7 +135,7 @@ function PrCard(props: {pr: Pr; root: string; api: Api; configured: boolean; ref
   const [preview, setPreview] = useState<Preview | null>(null);
   const [run, setRun] = useState<Run | null>(null);
 
-  // Follow a merge until Bitbucket answers.
+  // Follow a merge until the service answers.
   useEffect(() => {
     if (run?.status !== 'running') return;
     let live = true;
@@ -294,7 +294,7 @@ function PrCard(props: {pr: Pr; root: string; api: Api; configured: boolean; ref
   );
 }
 
-export default function PullRequestsPanel(props: {threadId: string; api: Api; openSettings: () => void}) {
+export default function PullRequestsPanel(props: {threadId: string; api: Api; openSettings: (module?: string) => void}) {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState('');
   const root = `/threads/${props.threadId}/pull-requests`;
@@ -313,16 +313,25 @@ export default function PullRequestsPanel(props: {threadId: string; api: Api; op
         PRs the agent linked in this session. Read the diff, mark it reviewed, then merge. Muster checks again that nothing changed before
         it merges.
       </p>
-      {!data.configured && (
+      {!data.providers.length && (
         <div className="pr-setup">
-          <p>Turn on Bitbucket pull requests and add its API token in Modules.</p>
-          <button className="primary" onClick={props.openSettings}>
-            Open module settings
+          <p>Reviewing and merging needs a pull-request module for your code host, such as Bitbucket pull requests. Install one from Modules.</p>
+          <button className="primary" onClick={() => props.openSettings()}>
+            Open modules
           </button>
         </div>
       )}
+      {/* One note per module that is installed but not ready, such as a missing token. */}
+      {[...new Map(data.prs.filter(pr => !pr.configured).map(pr => [pr.module, pr])).values()].map(pr => (
+        <div key={pr.module} className="pr-setup">
+          <p>Turn on {pr.moduleName} and finish its settings to review these PRs.</p>
+          <button className="primary" onClick={() => props.openSettings(pr.module)}>
+            Open {pr.moduleName}
+          </button>
+        </div>
+      ))}
       {data.prs.map(pr => (
-        <PrCard key={pr.key} pr={pr} root={root} api={props.api} configured={data.configured} refresh={() => void refresh()} />
+        <PrCard key={pr.key} pr={pr} root={root} api={props.api} configured={pr.configured} refresh={() => void refresh()} />
       ))}
       {error && <p className="pr-error">{error}</p>}
       {!data.prs.length && <p className="file-note">PR links the agent posts in this session will appear here.</p>}

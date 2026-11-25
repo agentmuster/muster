@@ -23,9 +23,10 @@ import {
 } from './security.js';
 import {canonicalCwd, jobs, LocalPiAgent, python, workspaceRoots} from './jobs.js';
 import {ACTIVE_CONTENT} from './files.js';
-import {modules} from './modules.js';
+import {MODULES_HOME, modules} from './modules.js';
+import {ModuleInstaller, OFFICIAL_REGISTRY} from './module-install.js';
 import {triage} from './triage.js';
-import {pullRequests} from './pull-requests.js';
+import {pullRequests, REVIEWED_PR} from './pull-requests.js';
 import {listCommands} from './commands.js';
 import {backgroundDetail} from './background.js';
 import {terminals} from './terminal.js';
@@ -261,7 +262,7 @@ function workspaceCwd(value: string) {
 }
 
 // All merge entry points, including generic Actions, require a saved passing review.
-modules.actionPolicies.set('reviewed-bitbucket-pr', input => pullRequests.requireReview(input));
+modules.actionPolicies.set(REVIEWED_PR, (input, call) => pullRequests.requireReview(input, call));
 
 // Auto-compact point for a model, as Pi resolves it for a folder.
 app.get('/api/compaction', async (req, res, next) => {
@@ -456,14 +457,14 @@ app.post('/api/threads/:id/pull-requests/:key/reviewed', async (req, res, next) 
 });
 app.post('/api/threads/:id/pull-requests/:key/preview', async (req, res, next) => {
   try {
-    const input = pullRequests.input(jobs.get(String(req.params.id)), String(req.params.key));
-    res.json(await modules.preview('bitbucket-pull-requests', 'merge', input));
+    const {module, action, input} = pullRequests.merge(jobs.get(String(req.params.id)), String(req.params.key));
+    res.json(await modules.preview(module, action, input));
   } catch (error) { next(error); }
 });
 app.post('/api/threads/:id/pull-requests/:key/merge', (req, res, next) => {
   try {
-    const input = pullRequests.input(jobs.get(String(req.params.id)), String(req.params.key));
-    res.json(modules.run('bitbucket-pull-requests', 'merge', input, req.body?.token));
+    const {module, action, input} = pullRequests.merge(jobs.get(String(req.params.id)), String(req.params.key));
+    res.json(modules.run(module, action, input, req.body?.token));
   } catch (error) { next(error); }
 });
 
@@ -617,19 +618,83 @@ app.post('/api/terminal/sessions/:id/close', (req, res) => {
 
 // Modules: integrations with their own settings and actions (Settings → Modules, the Actions panel).
 
+// Module repositories to browse: MUSTER_MODULE_REGISTRIES (comma-separated git URLs), else the official one.
+const installer = new ModuleInstaller(
+  modules,
+  MODULES_HOME,
+  path.join(DATA, 'modules'),
+  (process.env.MUSTER_MODULE_REGISTRIES || OFFICIAL_REGISTRY).split(',').map(url => url.trim().replace(/\/+$/, '')).filter(Boolean),
+);
+try {
+  installer.ensureSdkLink();
+} catch (error: any) {
+  console.warn('Could not link the module SDK into the modules folder:', error.message);
+}
+
+/** Installed modules with where each came from. */
+const moduleList = () => {
+  installer.syncFromDisk();
+  return modules.list().map(module => ({...module, install: installer.info(module.id)}));
+};
+
 app.get('/api/modules', (_req, res) => {
-  res.json({modules: modules.list(), runs: modules.recentRuns()});
+  res.json({modules: moduleList(), runs: modules.recentRuns(), installDisabled: installer.disabled});
 });
 
 app.post('/api/modules/reload', (_req, res) => {
   modules.reload();
-  res.json({modules: modules.list()});
+  res.json({modules: moduleList()});
+});
+
+// Browse module repositories, and install, update, roll back or remove modules. Installing always takes two steps:
+// a preview that stages the module and lists what it can reach, then the owner's confirmation with its token.
+app.get('/api/modules/registry', async (req, res, next) => {
+  try {
+    res.json(await installer.browse(req.query.refresh === '1'));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/modules/install/preview', async (req, res, next) => {
+  try {
+    res.json(await installer.preview(req.body ?? {}));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/modules/install', async (req, res, next) => {
+  try {
+    const result = await installer.install(req.body?.token);
+    res.json({...result, modules: moduleList()});
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/modules/:id/remove', async (req, res, next) => {
+  try {
+    await installer.remove(String(req.params.id));
+    res.json({modules: moduleList()});
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/modules/:id/rollback', async (req, res, next) => {
+  try {
+    await installer.rollback(String(req.params.id));
+    res.json({modules: moduleList()});
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.post('/api/modules/:id/settings', (req, res, next) => {
   try {
     modules.save(String(req.params.id), req.body ?? {});
-    res.json({modules: modules.list()});
+    res.json({modules: moduleList()});
   } catch (error) {
     next(error);
   }

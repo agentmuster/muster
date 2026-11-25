@@ -6,6 +6,7 @@ import path from 'node:path';
 import {writePrivate} from './account.js';
 import {redact} from './redact.js';
 import {DATA} from './security.js';
+import {validTemplate, type LinkTemplate} from '../shared/pr-links.js';
 
 // Modules add integrations without changing Muster: actions the owner runs from the Actions panel (with a
 // preview and confirmation Muster enforces), described by a manifest, run in their own process.
@@ -18,10 +19,9 @@ const SECRETS_FILE = path.join(STATE, 'secrets.json');
 const ACTIVITY_FILE = path.join(STATE, 'activity.jsonl');
 const INBOX_FILE = path.join(STATE, 'inbox.json');
 
-export const MODULE_DIRS = [
-  path.join(ROOT, 'modules'),
-  process.env.MUSTER_MODULES_DIR || path.join(os.homedir(), '.config/muster/modules'),
-];
+/** Where installed modules live, one folder each. Modules are installed from a module repository, a git URL or a folder. */
+export const MODULES_HOME = path.resolve(process.env.MUSTER_MODULES_DIR || path.join(os.homedir(), '.config/muster/modules'));
+export const MODULE_DIRS = [MODULES_HOME];
 const CHILD = path.join(ROOT, 'server/module-child.ts');
 const PREVIEW_TTL_MS = 10 * 60_000;
 const CALL_TIMEOUT_MS = 60_000;
@@ -36,23 +36,16 @@ const MAX_INBOX = 500;
 /** Connectors Muster can lend a module; each must be listed in the module's manifest. */
 const CONNECTORS = ['composio'];
 
-export type Field = {
-  key: string;
-  label: string;
-  type: 'string' | 'secret' | 'text' | 'number' | 'select';
-  description?: string;
-  default?: string | number;
-  required?: boolean;
-  options?: {value: string; label?: string}[];
-  /** Show the field only when another field has one of these values. */
-  showWhen?: Record<string, string[]>;
-  /** A page where the value is made, such as the service's API token page. https only. */
-  link?: {url: string; label: string};
-};
+export type {Field, Preview, Progress} from '../packages/module-sdk/index.ts';
+import type {Field, Preview, Progress} from '../packages/module-sdk/index.ts';
 
 export type ActionInfo = {id: string; title: string; description?: string; confirm: 'always' | 'never'; policy?: string};
 export type FeedInfo = {id: string; title: string; every: number};
 export type ToolInfo = {name: string; description: string; parameters: Record<string, unknown>};
+/** A Muster feature the module provides, such as reviewing and merging pull requests. */
+export type Providers = {pullRequests?: {links: LinkTemplate[]; mergeAction: string}};
+/** The policy a pull-request provider's merge action must carry: the owner reviewed this exact revision. */
+export const REVIEWED_PR = 'reviewed-pr';
 
 /** An Inbox entry: a feed item plus where it came from and whether the owner has dealt with it. */
 export type InboxItem = {
@@ -90,11 +83,10 @@ export type Manifest = {
   feeds: FeedInfo[];
   tools: ToolInfo[];
   connectors: string[];
+  providers: Providers;
   dir: string;
 };
 
-export type Preview = {summary: string; details?: string[]; danger?: boolean; confirmLabel?: string; link?: string};
-export type Progress = {status?: string; text?: string; link?: string; steps?: {name: string; state: string}[]};
 export type ModuleRun = {
   id: string;
   module: string;
@@ -161,7 +153,7 @@ export function loadManifest(dir: string): Manifest | undefined {
                             t.parameters?.type === 'object',
                         )
                       ? 'invalid tools (lowercase snake_case names, a description, object parameters)'
-                      : '';
+                      : providerProblem(raw);
   if (problem) {
     console.warn(`Skipping module in ${dir}: ${problem}`);
     return undefined;
@@ -183,6 +175,9 @@ export function loadManifest(dir: string): Manifest | undefined {
     })),
     connectors: raw.connectors ?? [],
     tools: (raw.tools ?? []).map((t: any) => ({name: t.name, description: t.description.slice(0, 2000), parameters: t.parameters})),
+    providers: raw.providers?.pullRequests
+      ? {pullRequests: {links: raw.providers.pullRequests.links.map((l: any) => ({host: l.host, path: l.path})), mergeAction: raw.providers.pullRequests.mergeAction}}
+      : {},
     actions: (raw.actions ?? []).map((a: any) => ({
       id: a.id,
       title: a.title,
@@ -193,6 +188,23 @@ export function loadManifest(dir: string): Manifest | undefined {
     })),
     dir,
   };
+}
+
+/** Why a manifest's providers are invalid, or '' if they are fine. A merge action must be gated by the owner's review. */
+function providerProblem(raw: any) {
+  if (raw.providers === undefined) return '';
+  if (!raw.providers || typeof raw.providers !== 'object') return 'invalid providers';
+  const known = ['pullRequests'];
+  if (Object.keys(raw.providers).some(key => !known.includes(key))) return `unknown provider (known: ${known.join(', ')})`;
+  const pr = raw.providers.pullRequests;
+  if (pr === undefined) return '';
+  if (!pr || !Array.isArray(pr.links) || !pr.links.length || !pr.links.every(validTemplate)) {
+    return 'invalid pull request links (exact host, a path with one {number})';
+  }
+  const merge = (raw.actions ?? []).find((a: any) => a?.id === pr.mergeAction);
+  if (!merge) return 'the pull request mergeAction is not one of the actions';
+  if (merge.policy !== REVIEWED_PR) return `the pull request merge action must have policy "${REVIEWED_PR}"`;
+  return '';
 }
 
 /** Hosts a module's code may contact: its manifest list plus the hosts of URLs in its own settings. */
@@ -217,7 +229,7 @@ export class Modules {
   manifests = new Map<string, Manifest>();
   runs = new Map<string, ModuleRun>();
   /** Host checks for actions that need more than confirmation, such as a current PR review. */
-  actionPolicies = new Map<string, (input: Record<string, unknown>) => void>();
+  actionPolicies = new Map<string, (input: Record<string, unknown>, call: {module: string; action: string}) => void>();
   private previews = new Map<string, {module: string; action: string; hash: string; at: number; preview: Preview}>();
 
   constructor(private dirs = MODULE_DIRS) {
@@ -289,9 +301,9 @@ export class Modules {
         actions: manifest.actions,
         feeds: manifest.feeds,
         tools: manifest.tools.map(tool => tool.name),
+        providers: manifest.providers,
         connectors: manifest.connectors,
         network: allowedHosts(manifest, this.values(manifest)),
-        local: !manifest.dir.startsWith(path.join(ROOT, 'modules')),
       };
     });
   }
@@ -418,17 +430,17 @@ export class Modules {
     return Array.isArray(fields) ? fields.filter(validField) : [];
   }
 
-  private checkPolicy(info: ActionInfo, input: Record<string, unknown>) {
+  private checkPolicy(module: string, info: ActionInfo, input: Record<string, unknown>) {
     if (!info.policy) return;
     const policy = this.actionPolicies.get(info.policy);
     if (!policy) throw new Error('This action requires a host policy that is not available.');
-    policy(input);
+    policy(input, {module, action: info.id});
   }
 
   /** The preview the owner must see before an action runs. Returns a single-use token for run(). */
   async preview(id: string, action: string, input: Record<string, unknown>) {
     const {manifest, info} = this.ready(id, action);
-    this.checkPolicy(info, input);
+    this.checkPolicy(id, info, input);
     const raw = await this.call(manifest, 'preview', action, input);
     const preview: Preview = {
       summary: String(raw?.summary ?? '').slice(0, 500),
@@ -449,7 +461,7 @@ export class Modules {
    */
   run(id: string, action: string, input: Record<string, unknown>, token: unknown) {
     const {manifest, info} = this.ready(id, action);
-    this.checkPolicy(info, input);
+    this.checkPolicy(id, info, input);
     const seen = typeof token === 'string' ? this.previews.get(token) : undefined;
     if (info.confirm === 'always') {
       if (!seen || seen.module !== id || seen.action !== action || seen.hash !== inputHash(input) || Date.now() - seen.at > PREVIEW_TTL_MS) {
@@ -496,8 +508,53 @@ export class Modules {
     }
   }
 
+  /** Adds an entry to the module activity log, such as an install. */
+  logEvent(entry: Record<string, unknown>) {
+    try {
+      mkdirSync(STATE, {recursive: true, mode: 0o700});
+      appendFileSync(ACTIVITY_FILE, redact(JSON.stringify({at: Date.now(), ...entry})) + '\n', {mode: 0o600});
+    } catch {
+      // Best effort.
+    }
+  }
+
+  /** Deletes a module's settings and saved secrets, when it is removed. */
+  forget(id: string) {
+    const settings = this.settings();
+    delete settings[id];
+    writePrivate(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+    const secrets = this.secrets();
+    delete secrets[id];
+    writePrivate(SECRETS_FILE, JSON.stringify(secrets, null, 2));
+  }
+
   recentRuns() {
     return [...this.runs.values()].sort((a, b) => b.started - a.started).slice(0, 20);
+  }
+
+  // Providers: modules that supply a Muster feature, such as pull-request review and merge.
+
+  /** Modules that provide pull requests, enabled or not; links only count for installed modules. */
+  prProviders() {
+    return [...this.manifests.values()]
+      .filter(manifest => manifest.providers.pullRequests)
+      .map(manifest => ({
+        module: manifest.id,
+        name: manifest.name,
+        links: manifest.providers.pullRequests!.links,
+        mergeAction: manifest.providers.pullRequests!.mergeAction,
+        configured: this.enabled(manifest.id) && !manifest.settings.some(field => field.required && !this.hasValue(manifest, field)),
+      }));
+  }
+
+  /** Calls a provider method, such as pullRequests.snapshot, in the module's own process. */
+  async callProvider(id: string, provider: keyof Providers, method: string, input: Record<string, unknown>) {
+    const manifest = this.get(id);
+    if (!manifest.providers[provider]) throw new Error(`${manifest.name} does not provide ${provider}.`);
+    if (!this.enabled(id)) throw new Error(`${manifest.name} is turned off. Turn it on in Settings → Modules.`);
+    const missing = manifest.settings.filter(field => field.required && !this.hasValue(manifest, field));
+    if (missing.length) throw new Error(`${manifest.name} needs settings first: ${missing.map(f => f.label).join(', ')}.`);
+    return this.call(manifest, 'provider', method, input, undefined, TOOL_TIMEOUT_MS, {provider});
   }
 
   // Agent tools: enabled modules can give the agent read tools, such as searching Teams.

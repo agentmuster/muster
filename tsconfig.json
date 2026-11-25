@@ -23,7 +23,8 @@
     "server",
     "web",
     "test",
-    "modules",
+    "packages",
+    "shared",
     "vite.config.ts"
   ]
 }

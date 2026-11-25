@@ -79,6 +79,10 @@ before(async () => {
       PI_BIN: fakePi,
       // Pi settings live in the temp folder, so the compaction test never touches the real ones.
       PI_CODING_AGENT_DIR: piAgentDir,
+      // Installed modules and module repositories stay inside the temp folder too.
+      MUSTER_MODULES_DIR: path.join(tempRoot, 'modules'),
+      MUSTER_MODULE_REGISTRIES: 'file:///nonexistent-muster-registry',
+      MUSTER_INBOX_DISABLED: '1',
       FAKE_PI_SCENARIO: 'ok',
     },
     stdio: 'ignore',
@@ -368,7 +372,7 @@ test('session PR endpoints require sign-in, origin and membership in the session
   const route = `/api/threads/${created.id}/pull-requests`;
   assert.equal((await fetch(base + route)).status, 401);
   const view = await (await fetch(base + route, {headers: {cookie}})).json();
-  assert.deepEqual(view, {configured: false, prs: []});
+  assert.deepEqual(view, {providers: [], prs: []});
   assert.equal((await post(route + '/missing/review', {})).status, 404);
   assert.equal((await post(route + '/missing/preview', {})).status, 404);
   assert.equal((await post(route + '/missing/merge', {})).status, 404);

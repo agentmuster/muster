@@ -51,6 +51,13 @@ try {
     write({type: 'result', data: await feed.list(ctx, request.state ?? null)});
     process.exit(0);
   }
+  if (request.method === 'provider') {
+    const provider = (module.providers as Record<string, any> | undefined)?.[request.provider];
+    const method = provider?.[request.action];
+    if (typeof method !== 'function') throw new Error(`The module has no ${request.provider}.${request.action}.`);
+    write({type: 'result', data: await method.call(provider, ctx, request.input ?? {})});
+    process.exit(0);
+  }
   if (request.method === 'tool') {
     const tool = module.tools?.[request.action];
     if (typeof tool !== 'function') throw new Error(`The module has no tool "${request.action}".`);
