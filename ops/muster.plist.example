@@ -2,12 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
   Starts Muster at login on macOS. Replace every /path/to and YOUR_HOME value, then:
-    cp ops/muster.plist.example ~/Library/LaunchAgents/dev.agentmuster.muster.plist
-    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.agentmuster.muster.plist
-  Restart later with: launchctl kickstart -k gui/$(id -u)/dev.agentmuster.muster
+    cp ops/muster.plist.example ~/Library/LaunchAgents/io.agentmuster.muster.plist
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/io.agentmuster.muster.plist
+  Restart later with: launchctl kickstart -k gui/$(id -u)/io.agentmuster.muster
 -->
 <plist version="1.0"><dict>
-  <key>Label</key><string>dev.agentmuster.muster</string>
+  <key>Label</key><string>io.agentmuster.muster</string>
   <key>ProgramArguments</key><array>
     <string>/path/to/node</string><string>--import</string><string>tsx</string><string>server/index.ts</string>
   </array>
