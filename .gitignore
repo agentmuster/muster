@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.data/
+.env
+.env.*
+!.env.example
+.pi-subagents/
+__pycache__/
+*.pyc
+*.log
+.DS_Store
+
+scripts/.icon-candidates/
+
+# Agent and tool state that belongs to the person working here, not the project.
+.pi-glla/
+.pi/
+.claude/
+.codex/
+*.local.*
+coverage/

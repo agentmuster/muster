@@ -1,0 +1,5 @@
+App icon for "Muster", an open source app that gathers all your AI agents and their sessions into one place.
+Square, full-bleed: the solid flat background fills the entire canvas edge to edge, no rounded corners, no border, no frame, no text, no letters except the single shape described.
+Background: solid flat lime green (#c9f28d), no gradient, no texture.
+Symbol: a bold, geometric letter M in very dark charcoal (#13170f), built from three thick strokes that converge, like separate paths coming together into one. Centered, occupying the middle 55 percent of the canvas, generous empty space around it.
+Flat vector style, no glow, no shadow, no 3D, crisp edges, high contrast, instantly recognizable at 32 pixels. Modern, confident, minimal, like a well-designed developer tool logo.

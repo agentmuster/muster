@@ -1,0 +1,5 @@
+App icon for "Muster", an open source app that gathers all your AI agents (Claude, ChatGPT/Codex, Gemini and others) and their sessions into one place.
+Square, full-bleed: the solid flat background fills the entire canvas edge to edge, no rounded corners, no border, no frame, no text, no letters, no logos.
+Background: solid flat very dark charcoal (#14171c), no gradient, no texture.
+Symbol: one bold lime-green dot (#c9f28d) in the exact center, with five bold, thick, rounded arrows arranged evenly around it, each pointing inward toward the dot as if answering a call to gather. Each arrow is a different solid flat color: terracotta orange (#D97757), emerald green (#10A37F), bright blue (#4285F4), violet (#8E75B2), warm amber (#F4B400). Equal size and weight, balanced spacing, clean geometry. The whole symbol is centered and occupies the middle 58 percent of the canvas, with generous empty space around it.
+Flat vector style, no glow, no shadow, no 3D, no gradients, crisp edges, high contrast, instantly recognizable at 32 pixels. Modern, friendly, confident, minimal.

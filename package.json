@@ -1,0 +1,73 @@
+{
+  "name": "agentmuster",
+  "version": "0.1.0",
+  "description": "One app for all your coding agents and their sessions: search Pi, Claude Code and Codex history, run Pi threads from your phone, and take over the browser when an agent needs you.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.23"
+  },
+  "files": [
+    "dist/",
+    "server/",
+    "shared/",
+    "engine/",
+    "modules/",
+    "pi-session-memory/",
+    "scripts/rotate-password.ts",
+    "requirements.txt",
+    ".env.example",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md",
+    "ops/muster.plist.example",
+    "CONTRIBUTING.md",
+    "!**/__pycache__"
+  ],
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server/index.ts",
+    "start": "tsx server/index.ts",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts && python3 -m unittest discover -s test -p '*_test.py'",
+    "index": "python3 engine/indexer.py index",
+    "smoke:pi": "node scripts/smoke-pi.mjs",
+    "smoke:browser": "node scripts/smoke-browser.mjs",
+    "rotate-password": "tsx scripts/rotate-password.ts"
+  },
+  "dependencies": {
+    "@ag-ui/client": "1.0.5",
+    "@ag-ui/core": "1.0.5",
+    "@copilotkit/react-core": "1.89.0",
+    "@copilotkit/react-ui": "1.89.0",
+    "@copilotkit/runtime": "1.89.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^5.5.0",
+    "diff": "^8.0.4",
+    "diff2html": "^3.4.56",
+    "express": "^5.1.0",
+    "highlight.js": "^11.12.0",
+    "node-pty": "^1.1.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "rxjs": "7.8.1",
+    "ws": "^8.18.3",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.19.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.1.0"
+  },
+  "overrides": {
+    "@fastify/busboy": "^3.2.6",
+    "graphql-scalars": "^2.0.1",
+    "undici": "^6.29.1"
+  }
+}

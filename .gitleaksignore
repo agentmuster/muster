@@ -1,0 +1,8 @@
+# Fake credentials in redaction tests (they check that Muster hides secrets).
+test/indexer_test.py:jwt:139
+test/indexer_test.py:aws-access-token:145
+test/indexer_test.py:generic-api-key:148
+test/indexer_test.py:generic-api-key:162
+test/security.test.ts:generic-api-key:111
+test/security.test.ts:jwt:118
+test/security.test.ts:aws-access-token:124

@@ -1,0 +1,90 @@
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#dce3eb;background:#101419}*{box-sizing:border-box}body{margin:0}#viewer{height:100dvh;display:flex;flex-direction:column}.toolbar{display:flex;gap:7px;padding:10px;background:#1c232b;border-bottom:1px solid #333c45}input,select,button{font:12px -apple-system,sans-serif;color:#e0e8ee;border:1px solid #3b4650;background:#151b22;border-radius:6px;padding:8px;min-width:0}button{cursor:pointer;white-space:nowrap}button:hover{background:#303b44}.toolbar select{max-width:320px;flex:1}.toolbar input{flex:1;min-width:120px}#notice{font-size:10px;color:#b1bea5;padding:8px 12px;background:#1a2218;min-height:30px}#screen{flex:1;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none;outline:none;background:#0a0d11}#screen:focus{box-shadow:inset 0 0 0 2px #a7ca7c}#frame{width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-select:none;touch-action:none}#frame:not([src]){visibility:hidden}#typing{display:flex;gap:8px;padding:10px;background:#1d252d}#text{flex:1;font-size:16px}#typing button{background:#29352a}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #bad78f;outline-offset:1px}@media(max-width:650px){.toolbar{flex-wrap:wrap;padding:7px}.toolbar select{max-width:none;flex-basis:70%}.toolbar input{flex-basis:50%}#typing{flex-wrap:wrap;padding:7px;gap:5px}#text{flex-basis:65%;min-width:0}#typing button{font-size:11px}#notice{font-size:9px;line-height:1.5}}
+
+/* iOS zooms into any focused field under 16px. */
+@media (max-width: 850px), (pointer: coarse) {
+  input,
+  select {
+    font-size: 16px;
+  }
+}
+
+#frame {
+  transform-origin: 0 0;
+  will-change: transform;
+}
+#fit {
+  white-space: nowrap;
+}
+
+/* A dialog the page opened, shown over the picture */
+#screen {
+  position: relative;
+}
+#dialog {
+  position: absolute;
+  left: 50%;
+  top: 18%;
+  transform: translateX(-50%);
+  width: min(420px, 92%);
+  background: #f3f5f7;
+  color: #15191e;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 20px 60px #000c;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 5;
+}
+#dialog[hidden],
+#stuck[hidden] {
+  display: none;
+}
+#dialog strong {
+  font-size: 15px;
+}
+#dialog p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 40vh;
+  overflow: auto;
+}
+#dialog input {
+  background: #fff;
+  color: #15191e;
+  border-color: #b9c2cc;
+  font-size: 16px;
+}
+#dialog div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+#dialog button {
+  font-size: 15px;
+  padding: 9px 16px;
+  background: #e2e6ea;
+  color: #15191e;
+  border-color: #c3cad1;
+}
+#dialog-ok {
+  background: #2f6fd6 !important;
+  color: #fff !important;
+  border-color: #2f6fd6 !important;
+}
+#stuck {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #3a2a1d;
+  color: #f1d3b4;
+  font-size: 13px;
+  line-height: 1.5;
+}
+#stuck span {
+  flex: 1;
+}

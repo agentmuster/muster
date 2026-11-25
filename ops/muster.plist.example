@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Starts Muster at login on macOS. Replace every /path/to and YOUR_HOME value, then:
+    cp ops/muster.plist.example ~/Library/LaunchAgents/dev.agentmuster.muster.plist
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.agentmuster.muster.plist
+  Restart later with: launchctl kickstart -k gui/$(id -u)/dev.agentmuster.muster
+-->
+<plist version="1.0"><dict>
+  <key>Label</key><string>dev.agentmuster.muster</string>
+  <key>ProgramArguments</key><array>
+    <string>/path/to/node</string><string>--import</string><string>tsx</string><string>server/index.ts</string>
+  </array>
+  <key>WorkingDirectory</key><string>/path/to/muster</string>
+  <key>EnvironmentVariables</key><dict>
+    <!-- launchd starts with a minimal PATH: include the folders holding node, pi and python3. -->
+    <key>PATH</key><string>/path/to/node/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>HOME</key><string>YOUR_HOME</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>YOUR_HOME/.local/share/muster/logs/app.log</string>
+  <key>StandardErrorPath</key><string>YOUR_HOME/.local/share/muster/logs/app.log</string>
+</dict></plist>

@@ -1,0 +1,13 @@
+{
+  "name": "pi-session-memory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Read-only access to earlier Pi, Claude Code and Codex sessions through the Muster session index",
+  "keywords": ["pi-package"],
+  "bin": {"session-memory": "./bin/session-memory.mjs"},
+  "pi": {
+    "extensions": ["./extension.ts"],
+    "skills": ["./skills"]
+  }
+}

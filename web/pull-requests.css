@@ -1,0 +1,249 @@
+.pr-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.pr-panel > .muted {
+  margin: 0;
+  font-size: 12px;
+}
+.pr-card,
+.pr-setup,
+.pr-confirm {
+  min-width: 0;
+  border: 1px solid #343b44;
+  border-radius: 9px;
+  padding: 14px;
+  overflow-wrap: anywhere;
+}
+.pr-card {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.pr-card p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.pr-title {
+  color: var(--accent);
+  font-weight: 600;
+}
+.pr-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.pr-buttons button {
+  font-size: 13px;
+}
+.pr-confirm {
+  border-color: #947443;
+  background: #30281c;
+}
+.pr-confirm ul,
+.pr-findings {
+  padding-left: 18px;
+  margin: 0;
+}
+.pr-findings:empty {
+  display: none;
+}
+.pr-findings li + li {
+  margin-top: 10px;
+}
+.pr-verdict.approve {
+  color: var(--accent);
+}
+.pr-error,
+.pr-verdict.changes_requested {
+  color: #efb7a8;
+}
+.pr-verdict.needs_context {
+  color: #efbd70;
+}
+@media (max-width: 620px) {
+  .files-tabs button {
+    font-size: 12px;
+    padding: 10px 3px;
+  }
+  .files-tabs button span {
+    margin-left: 2px;
+    padding: 1px 4px;
+  }
+}
+.pr-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+.pr-card .plus {
+  color: #8fd18a;
+  font-weight: 600;
+}
+.pr-card .minus {
+  color: #ef8a6b;
+  font-weight: 600;
+}
+.pr-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pr-status {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #262c33;
+  color: #c4ccd5;
+}
+.pr-status.successful {
+  background: #2a3324;
+  color: #c9f28d;
+}
+.pr-status.failed,
+.pr-status.stopped {
+  background: #3a2420;
+  color: #ef8a6b;
+}
+.pr-status.inprogress {
+  background: #3a2f1d;
+  color: #efbd70;
+}
+.pr-blockers {
+  border: 1px solid #6b5530;
+  background: #2a2419;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  color: #e9d6b0;
+}
+.pr-blockers ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.pr-reviewed {
+  color: #c9f28d;
+  font-size: 12.5px;
+}
+.pr-reviewed.stale {
+  color: #efbd70;
+}
+.pr-done {
+  color: #c9f28d;
+}
+.pr-description p {
+  font-size: 12.5px;
+  color: #c3cbd4;
+  margin-top: 6px;
+}
+.pr-diff {
+  min-width: 0;
+  margin: 0 -6px;
+}
+/* PR diffs span many files, so each file keeps its name bar. */
+.diff-view.with-files .d2h-file-header {
+  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #1b2026;
+  border-bottom: 1px solid #30363d;
+  padding: 6px 8px;
+  font-size: 12px;
+  height: auto;
+}
+.diff-view.with-files .d2h-file-name {
+  color: #e4e7ec;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.diff-view.with-files .d2h-file-wrapper + .d2h-file-wrapper {
+  margin-top: 10px;
+}
+/* Files of a PR: collapsed rows, tap to open one file's diff */
+.pr-files {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pr-expand-all {
+  align-self: flex-end;
+  font-size: 12px;
+  color: #c9f28d;
+}
+.pr-file {
+  border: 1px solid #2c333b;
+  border-radius: 8px;
+  overflow: hidden;
+  min-width: 0;
+}
+.pr-file.open {
+  border-color: #3c4652;
+}
+.pr-file-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 0;
+  background: #1b2026;
+  text-align: left;
+}
+.pr-file.open .pr-file-head {
+  border-bottom: 1px solid #30363d;
+}
+.pr-file-chevron {
+  flex-shrink: 0;
+  width: 14px;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+.pr-file.open .pr-file-chevron {
+  transform: rotate(90deg);
+}
+.pr-file-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pr-file-name strong {
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.pr-file-name small {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pr-file-note {
+  flex-shrink: 0;
+  font-style: normal;
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #262c33;
+  color: #c4ccd5;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pr-file-count {
+  flex-shrink: 0;
+  font-size: 12px;
+}
+.pr-file .diff-view {
+  border-radius: 0;
+}
