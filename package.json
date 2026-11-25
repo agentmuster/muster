@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "description": "One app for all your coding agents and their sessions: search Pi, Claude Code and Codex history, run Pi threads from your phone, and take over the browser when an agent needs you.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rampradeep84/muster.git"
+  },
+  "homepage": "https://github.com/rampradeep84/muster",
+  "bugs": {
+    "url": "https://github.com/rampradeep84/muster/issues"
+  },
   "engines": {
     "node": ">=22.23"
   },

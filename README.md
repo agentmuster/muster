@@ -2,7 +2,7 @@
 
 One app for all your AI agents and their sessions. Muster runs on an always-on desktop and you use it from anywhere, including your phone. Search your Pi, Claude Code and Codex history, continue or split any session, run managed Pi threads with cited context, and take over the desktop's BrowserOS browser when an agent needs you.
 
-The project is `agentmuster` on GitHub and npm; the app itself is called Muster.
+The code is at [github.com/rampradeep84/muster](https://github.com/rampradeep84/muster), and modules for other services are at [muster-modules](https://github.com/rampradeep84/muster-modules). The npm package name is `agentmuster`.
 
 The frontend uses CopilotKit. Its runtime and the session index run locally. Model requests still go to the provider configured in your installed Pi account. Selected historical excerpts travel with those requests. Nothing sends the full index to an embedding or hosted CopilotKit service.
 
