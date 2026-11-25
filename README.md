@@ -6,20 +6,29 @@ Website: [agentmuster.io](https://agentmuster.io). Modules for other services ar
 
 The frontend uses CopilotKit. Its runtime and the session index run locally. Model requests still go to the provider configured in your installed Pi account. Selected historical excerpts travel with those requests. Nothing sends the full index to an embedding or hosted CopilotKit service.
 
-## Run locally
+## Install
 
-Requires macOS (Linux is untested), Node 22.23 or later, Python 3 with NumPy and scikit-learn, and the [Pi](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) CLI signed in to a model provider. [BrowserOS](https://www.browseros.com) is optional: without it, browser takeover and the agent's browser tool are unavailable, and everything else works.
+```sh
+curl -fsSL https://agentmuster.io/install.sh | bash
+```
+
+Muster needs macOS (Linux is untested), git, Node 22.23 or later, Python 3.9 or later and the [Pi](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) CLI signed in to a model provider. The installer checks for each of them first and installs none of them: if any is missing it lists what to install, with the command, and stops. [BrowserOS](https://www.browseros.com) is optional: without it, browser takeover and the agent's browser tool are unavailable, and everything else works.
+
+The installer clones Muster into `~/.muster`, installs its Node packages, builds the web app, puts NumPy and scikit-learn in a virtual environment at `~/.muster/.venv`, and links the `agentmuster` command into `~/.local/bin`. It then starts Muster as a login service (launchd on macOS, a systemd user service on Linux) and waits until it answers. Running it again, or `agentmuster update`, updates the install and restarts it; a reply that was running stops and can be resumed. Settings for the installer, all optional: `MUSTER_DIR`, `MUSTER_PORT` (first install only), `MUSTER_BIN_DIR`, and `MUSTER_SERVICE=0` to skip the service.
+
+`agentmuster start` runs Muster in the terminal instead of as a service. `stop`, `restart`, `status` and `logs` manage the service, and `uninstall` removes the service and the command but keeps the app folder and your data.
+
+To run from a checkout instead:
 
 ```sh
 npm install
 python3 -m pip install -r requirements.txt
 cp .env.example .env
-npm run index
 npm run build
 npm start
 ```
 
-Open `http://127.0.0.1:47831`. The server binds only to loopback. On first startup it creates a random owner password and saves it in a private local file:
+Open `http://127.0.0.1:47831`. The server binds only to loopback and indexes your sessions in the background on startup. On first startup it creates a random owner password and saves it in a private local file:
 
 ```sh
 cat ~/.local/share/muster/initial-password.txt
