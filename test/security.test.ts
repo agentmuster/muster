@@ -1,6 +1,6 @@
 import {test, after} from 'node:test';
 import assert from 'node:assert/strict';
-import {chmodSync, mkdtempSync, readFileSync, realpathSync, rmSync, utimesSync, writeFileSync} from 'node:fs';
+import {chmodSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, utimesSync, writeFileSync} from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
@@ -9,7 +9,7 @@ process.env.MUSTER_DATA_DIR = dir;
 process.env.MUSTER_WORKSPACE_ROOTS = dir;
 delete process.env.MUSTER_ALLOWED_HOSTS;
 
-const {Auth, AccessVerifier, LoginThrottle, allowedHost, allowedOrigin, hosts, verifyPassword, sessionCookie} = await import('../server/security.js');
+const {Auth, AccessVerifier, LoginThrottle, allowedHost, allowedOrigin, desktopKey, hosts, verifyPassword, sessionCookie} = await import('../server/security.js');
 const {Takeover, validateInput, checkedUrl, suggestTab} = await import('../server/browser.js');
 const {canonicalCwd, pickSources, formatExcerpts, LineBuffer} = await import('../server/jobs.js');
 const {redact} = await import('../server/redact.js');
@@ -50,6 +50,26 @@ test('allowed-hosts file is merged, re-read on change, and ignored unless privat
   assert(hosts().has('127.0.0.1:47831'));
   rmSync(file);
   assert(!hosts().has('second-name.trycloudflare.com'));
+});
+
+test('the desktop key signs in the desktop app for 30 days, replacing its previous sign-in', async () => {
+  const key = desktopKey(dir);
+  assert.equal(desktopKey(dir), key, 'the key is created once');
+  assert.equal(statSync(path.join(dir, 'desktop-key')).mode & 0o777, 0o600);
+  assert.match(key, /^[A-Za-z0-9_-]{43}$/);
+  const auth = new Auth({attemptDelayMs: 0});
+  await assert.rejects(() => auth.desktop(req(), 'wrong', key), /Incorrect desktop key/);
+  await assert.rejects(() => auth.desktop(req(), undefined, key), /Incorrect desktop key/);
+  await assert.rejects(() => auth.desktop(req(), '', ''), /Incorrect desktop key/, 'an empty key never matches');
+  const first = await auth.desktop(req(), key, key);
+  const signedIn = (token: string) => auth.get(req(undefined, undefined, 'meta_session=' + token));
+  const session = signedIn(first)!;
+  assert(session.expires > Date.now() + 29 * 24 * 60 * 60_000);
+  const second = await auth.desktop(req(), key, key);
+  assert(signedIn(second));
+  assert.equal(signedIn(first), undefined, 'the previous desktop sign-in ends');
+  for (let i = 0; i < 8; i++) await assert.rejects(() => auth.desktop(req(), 'guess', key), /Incorrect/);
+  await assert.rejects(() => auth.desktop(req(), key, key), /Too many/, 'wrong keys are throttled like passwords');
 });
 
 test('password hashing, sessions, expiry and revocation', async () => {

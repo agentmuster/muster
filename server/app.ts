@@ -14,6 +14,7 @@ import {
   allowedOrigins,
   auth,
   csrfSafe,
+  desktopKey,
   hosts,
   isLoopbackAddress,
   savePrivate,
@@ -108,6 +109,18 @@ app.post('/api/login', async (req, res, next) => {
     const token = await auth.login(req, req.body?.password);
     res.setHeader('Set-Cookie', sessionCookie(token, secureRequest(req)));
     res.json({ok: true});
+  } catch (error) {
+    next(error);
+  }
+});
+
+// The desktop app signs in with the key in the data folder: Authorization: Bearer <key>.
+const DESKTOP_KEY = desktopKey();
+app.post('/api/desktop/session', async (req, res, next) => {
+  try {
+    const presented = /^Bearer (.+)$/.exec(req.headers.authorization || '')?.[1];
+    const token = await auth.desktop(req, presented, DESKTOP_KEY);
+    res.json({cookie: 'meta_session', token, maxAge: 30 * 24 * 60 * 60});
   } catch (error) {
     next(error);
   }

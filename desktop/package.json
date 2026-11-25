@@ -1,0 +1,50 @@
+{
+  "name": "muster-desktop",
+  "productName": "Muster",
+  "version": "0.1.0",
+  "description": "Muster in your menu bar: notifications when an agent needs you, and Muster in its own window.",
+  "license": "MIT",
+  "author": "Rampradeep Dodda <rampradeep.d@gmail.com>",
+  "homepage": "https://agentmuster.io",
+  "private": true,
+  "type": "module",
+  "main": "main.mjs",
+  "scripts": {
+    "start": "electron .",
+    "icons": "node scripts/make-icons.mjs",
+    "build": "electron-builder --mac --arm64 --x64",
+    "build:arm64": "electron-builder --mac --arm64"
+  },
+  "devDependencies": {
+    "electron": "45.5.0",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "io.agentmuster.desktop",
+    "productName": "Muster",
+    "copyright": "Copyright © 2026 Rampradeep Dodda",
+    "files": [
+      "main.mjs",
+      "muster.mjs",
+      "assets/**"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "assets/icon.png",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "identity": null,
+      "extendInfo": {
+        "LSUIElement": true
+      }
+    },
+    "dmg": {
+      "title": "Muster"
+    }
+  }
+}

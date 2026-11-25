@@ -56,6 +56,7 @@ Modules connect Muster to other services: Bitbucket pull requests and pipelines 
 - [Remote access](docs/remote-access.md)
 - [Guide](docs/guide.md): finding sessions, threads, files, terminal, browser takeover
 - [Modules](docs/modules.md)
+- [Desktop app](docs/desktop.md): a menu-bar icon with notifications when an agent needs you (macOS)
 - [Files, limits and development](docs/reference.md)
 - [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md)
 

@@ -261,6 +261,14 @@ function accessFromEnv() {
 export type Session = {id: string; expires: number; access?: string};
 const MAX_SESSIONS = 16;
 const SESSION_MS = 12 * 60 * 60_000;
+const DESKTOP_SESSION_MS = 30 * 24 * 60 * 60_000;
+
+/** The desktop app's key: random, created once, readable only by the owner (DATA/desktop-key). */
+export function desktopKey(dataDir = DATA) {
+  const file = path.join(dataDir, 'desktop-key');
+  if (!existsSync(file)) writePrivate(file, randomBytes(32).toString('base64url') + '\n');
+  return readFileSync(file, 'utf8').trim();
+}
 
 export class Auth {
   sessions = new Map<string, Session>();
@@ -313,11 +321,36 @@ export class Auth {
     if (this.attemptDelayMs) await new Promise(resolve => setTimeout(resolve, this.attemptDelayMs));
     if (!verifyPassword(password)) throw httpError('Incorrect password', 401);
     this.throttle.succeeded(key);
+    return this.issue(SESSION_MS);
+  }
+
+  /**
+   * Signs in the Muster desktop app, which proves itself with the key in the data folder: it runs as the owner
+   * on this computer. Its sign-in lasts 30 days, and a new one replaces the app's previous one.
+   */
+  async desktop(req: IncomingMessage, presented: unknown, key: string) {
+    const client = this.throttle.clientKey(req);
+    this.throttle.begin(client);
+    if (this.attemptDelayMs) await new Promise(resolve => setTimeout(resolve, this.attemptDelayMs));
+    const digest = (value: string) => createHash('sha256').update(value).digest();
+    if (typeof presented !== 'string' || !key || !timingSafeEqual(digest(presented), digest(key))) {
+      throw httpError('Incorrect desktop key', 401);
+    }
+    this.throttle.succeeded(client);
+    if (this.desktopSession) this.revoke(this.desktopSession);
+    const token = this.issue(DESKTOP_SESSION_MS);
+    this.desktopSession = createHash('sha256').update(token).digest('hex');
+    return token;
+  }
+
+  private desktopSession?: string;
+
+  private issue(lifetime: number) {
     this.sweep();
     if (this.sessions.size >= MAX_SESSIONS) this.revoke(this.sessions.keys().next().value!);
     const token = randomBytes(32).toString('base64url');
     const id = createHash('sha256').update(token).digest('hex');
-    this.sessions.set(id, {id, expires: Date.now() + SESSION_MS});
+    this.sessions.set(id, {id, expires: Date.now() + lifetime});
     this.save();
     return token;
   }

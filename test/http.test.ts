@@ -137,6 +137,19 @@ test('authentication, CSRF, Host and bounded parser gates', async () => {
   assert.equal((await post('/api/threads', {padding: 'x'.repeat(600_000)})).status, 413);
 });
 
+test('the desktop app signs in with the key from the data folder', async () => {
+  const key = readFileSync(path.join(dir, 'desktop-key'), 'utf8').trim();
+  const ask = (headers: Record<string, string>) =>
+    fetch(base + '/api/desktop/session', {method: 'POST', headers: {'content-type': 'application/json', ...headers}, body: '{}'});
+  assert.equal((await ask({authorization: 'Bearer ' + key})).status, 403, 'like every POST, it needs the Origin header');
+  assert.equal((await ask({origin: base})).status, 401);
+  assert.equal((await ask({origin: base, authorization: 'Bearer nope'})).status, 401);
+  const signedIn = await ask({origin: base, authorization: 'Bearer ' + key});
+  assert.equal(signedIn.status, 200);
+  const {cookie: name, token} = await signedIn.json();
+  assert.equal((await fetch(base + '/api/threads', {headers: {cookie: `${name}=${token}`}})).status, 200);
+});
+
 test('encoded and case-varied viewer paths cannot skip the sign-in check', async () => {
   const host = {host: `127.0.0.1:${port}`};
   for (const route of ['/%76iewer.html', '/%76iewer', '/viewer%2ehtml', '/assets/..%2fviewer.html', '/assets/%2e%2e/viewer.html']) {
