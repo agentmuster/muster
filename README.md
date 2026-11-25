@@ -31,16 +31,16 @@ With **Cloudflare Tunnel and Access** (the tested setup):
 
 <table>
 <tr>
-<td width="25%"><img src="docs/images/history.webp" alt="History search"><br><b>Every session, searchable.</b> Pi, Claude Code and Codex history in one local index. Continue, split or start fresh with context.</td>
-<td width="25%"><img src="docs/images/thread.webp" alt="A Pi thread"><br><b>Pi threads on any screen.</b> Runs keep going when you close the tab. Queue the next message while it works.</td>
-<td width="25%"><img src="docs/images/changes.webp" alt="Code changes"><br><b>See what changed.</b> Every file the agent edited, as a diff.</td>
-<td width="25%"><img src="docs/images/review.webp" alt="Pull request review"><br><b>Review and merge PRs.</b> Read the diff, sign off and merge without leaving the thread.</td>
+<td width="25%" valign="top"><img src="docs/images/history.webp" alt="History search"><br><b>Every session, searchable.</b> Pi, Claude Code and Codex history in one local index. Continue, split or start fresh with context.</td>
+<td width="25%" valign="top"><img src="docs/images/thread.webp" alt="A Pi thread"><br><b>Pi threads on any screen.</b> Runs keep going when you close the tab. Queue the next message while it works.</td>
+<td width="25%" valign="top"><img src="docs/images/changes.webp" alt="Code changes"><br><b>See what changed.</b> Every file the agent edited, as a diff.</td>
+<td width="25%" valign="top"><img src="docs/images/review.webp" alt="Pull request review"><br><b>Review and merge PRs.</b> Read the diff, sign off and merge without leaving the thread.</td>
 </tr>
 <tr>
-<td><img src="docs/images/question.webp" alt="A question from the agent"><br><b>Answer the agent.</b> Its questions show up as cards you tap.</td>
-<td><img src="docs/images/background.webp" alt="Background subagents"><br><b>Background agents.</b> Subagents and workflows keep running, and report back to the thread.</td>
-<td><img src="docs/images/inbox.webp" alt="Inbox"><br><b>Inbox.</b> Teams messages grouped into requests, each one a tap away from a session.</td>
-<td><img src="docs/images/terminal.webp" alt="Terminal"><br><b>Terminal.</b> A shell on your computer, from the browser. Off until you turn it on.</td>
+<td valign="top"><img src="docs/images/question.webp" alt="A question from the agent"><br><b>Answer the agent.</b> Its questions show up as cards you tap.</td>
+<td valign="top"><img src="docs/images/background.webp" alt="Background subagents"><br><b>Background agents.</b> Subagents and workflows keep running, and report back to the thread.</td>
+<td valign="top"><img src="docs/images/inbox.webp" alt="Inbox"><br><b>Inbox.</b> Teams messages grouped into requests, each one a tap away from a session.</td>
+<td valign="top"><img src="docs/images/terminal.webp" alt="Terminal"><br><b>Terminal.</b> A shell on your computer, from the browser. Off until you turn it on.</td>
 </tr>
 </table>
 
